@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import {
-  adminSessionCookieName,
-  adminSessionCookieOptions,
+  adminAccessTokenCookieName,
+  adminAccessTokenCookieOptions,
+  adminRefreshTokenCookieName,
+  adminRefreshTokenCookieOptions,
+  createAdminAuthTokens,
   createAdminSession
 } from "@/lib/admin";
 
@@ -16,10 +19,9 @@ export async function POST(request: Request) {
   }
 
   const session = await createAdminSession();
+  const { accessToken, refreshToken } = await createAdminAuthTokens(session.token);
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(adminSessionCookieName, session.token, {
-    ...adminSessionCookieOptions,
-    expires: session.expiresAt
-  });
+  res.cookies.set(adminAccessTokenCookieName, accessToken, adminAccessTokenCookieOptions);
+  res.cookies.set(adminRefreshTokenCookieName, refreshToken, adminRefreshTokenCookieOptions);
   return res;
 }

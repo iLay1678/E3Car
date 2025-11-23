@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type ConfigResponse = {
   hasConfig: boolean;
@@ -56,9 +56,25 @@ export default function AdminPage() {
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
 
-  async function fetchConfigAndInvites() {
+  const fetchWithAuth = useCallback(
+    async (input: RequestInfo | URL, initFactory?: () => RequestInit) => {
+      const attempt = () => fetch(input, initFactory ? initFactory() : undefined);
+      let res = await attempt();
+      if (res.status !== 401) {
+        return res;
+      }
+      const refreshRes = await fetch("/api/admin/token", { method: "POST" });
+      if (!refreshRes.ok) {
+        return res;
+      }
+      return attempt();
+    },
+    []
+  );
+
+  const fetchConfigAndInvites = useCallback(async () => {
     setError(null);
-    const res = await fetch("/api/admin/config");
+    const res = await fetchWithAuth("/api/admin/config");
     if (res.status === 401) {
       setAuthed(false);
       return;
@@ -78,17 +94,21 @@ export default function AdminPage() {
       }));
     }
 
-    const inviteRes = await fetch("/api/admin/invite");
+    const inviteRes = await fetchWithAuth("/api/admin/invite");
+    if (inviteRes.status === 401) {
+      setAuthed(false);
+      return;
+    }
     if (inviteRes.ok) {
       const inviteData = (await inviteRes.json()) as Invite[];
       setInvites(inviteData);
       setSelectedCodes([]);
     }
-  }
+  }, [fetchWithAuth]);
 
   useEffect(() => {
     fetchConfigAndInvites();
-  }, []);
+  }, [fetchConfigAndInvites]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -116,12 +136,17 @@ export default function AdminPage() {
     setLoading(true);
     setMessage(null);
     setError(null);
-    const res = await fetch("/api/admin/config", {
+    const res = await fetchWithAuth("/api/admin/config", () => ({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(configForm)
-    });
+    }));
     setLoading(false);
+    if (res.status === 401) {
+      setAuthed(false);
+      setError("未授权");
+      return;
+    }
     if (!res.ok) {
       const body = await res.json();
       setError(body.error || "保存失败");
@@ -134,7 +159,7 @@ export default function AdminPage() {
   async function handleFetchSkus() {
     setLoadingSkus(true);
     setError(null);
-    const res = await fetch("/api/admin/skus");
+    const res = await fetchWithAuth("/api/admin/skus");
     setLoadingSkus(false);
     if (res.status === 401) {
       setAuthed(false);
@@ -163,11 +188,16 @@ export default function AdminPage() {
     e.preventDefault();
     setError(null);
     setMessage(null);
-    const res = await fetch("/api/admin/invite", {
+    const res = await fetchWithAuth("/api/admin/invite", () => ({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ count: inviteCount })
-    });
+    }));
+    if (res.status === 401) {
+      setAuthed(false);
+      setError("未授权");
+      return;
+    }
     if (!res.ok) {
       const body = await res.json();
       setError(body.error || "创建失败");
@@ -181,11 +211,16 @@ export default function AdminPage() {
   async function handleCreateSingle(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const res = await fetch("/api/admin/invite", {
+    const res = await fetchWithAuth("/api/admin/invite", () => ({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code: inviteCode })
-    });
+    }));
+    if (res.status === 401) {
+      setAuthed(false);
+      setError("未授权");
+      return;
+    }
     if (!res.ok) {
       const body = await res.json();
       setError(body.error || "创建失败");
@@ -197,7 +232,14 @@ export default function AdminPage() {
   }
 
   async function handleRevoke(code: string) {
-    const res = await fetch(`/api/admin/invite?code=${code}`, { method: "DELETE" });
+    const res = await fetchWithAuth(`/api/admin/invite?code=${code}`, () => ({
+      method: "DELETE"
+    }));
+    if (res.status === 401) {
+      setAuthed(false);
+      setError("未授权");
+      return;
+    }
     if (!res.ok) {
       const body = await res.json();
       setError(body.error || "作废失败");

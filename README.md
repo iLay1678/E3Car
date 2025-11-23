@@ -27,6 +27,7 @@ ENTRA_TENANT_ID="目录(租户)ID"                # Azure Portal 复制
 ENTRA_TENANT_DOMAIN="yourtenant.onmicrosoft.com" # 租户的 onmicrosoft.com 域名
 OAUTH_REDIRECT_URI="http://localhost:3000/api/admin/oauth/callback" # 本地回调地址
 ADMIN_PASSWORD="自定义后台密码"              # 用于登录后台
+ADMIN_JWT_SECRET="随机 32+ 字符"            # 签发后台 JWT 的密钥
 DATABASE_URL="file:./dev.db"                # 本地 SQLite
 OFFICE_E3_SKU_ID="可选，Office 365 E3 的 skuId，用于自动分配许可证"
 ENTRA_USAGE_LOCATION="CN"                   # 两位国家/地区代码，默认 CN
@@ -51,6 +52,7 @@ ENTRA_USAGE_LOCATION="CN"                   # 两位国家/地区代码，默认
 ## 生产部署提示
 
 - 在 Azure 应用的“身份验证”中添加生产域名回调，例如 `https://yourdomain.com/api/admin/oauth/callback`，并同步更新 `.env` 的 `OAUTH_REDIRECT_URI`。  
+- 生成 32 位以上随机的 `ADMIN_JWT_SECRET`，保护后台 access/refresh token 签名。  
 - 使用持久化数据库（例如 Azure SQL/Postgres），并更新 `DATABASE_URL`。  
 - 生产启动：`npm run build`，`npm start`（确保设置了所有环境变量）。
 

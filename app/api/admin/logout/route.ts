@@ -1,20 +1,32 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
-  adminSessionCookieName,
-  adminSessionCookieOptions,
+  adminAccessTokenCookieName,
+  adminAccessTokenCookieOptions,
+  adminRefreshTokenCookieName,
+  adminRefreshTokenCookieOptions,
+  decodeSessionIdFromToken,
   deleteAdminSession
 } from "@/lib/admin";
 
 export async function POST() {
-  const token = cookies().get(adminSessionCookieName)?.value;
-  if (token) {
-    await deleteAdminSession(token);
+  const cookieStore = cookies();
+  const accessToken = cookieStore.get(adminAccessTokenCookieName)?.value;
+  const refreshToken = cookieStore.get(adminRefreshTokenCookieName)?.value;
+  const sessionId =
+    (accessToken && decodeSessionIdFromToken(accessToken)) ||
+    (refreshToken && decodeSessionIdFromToken(refreshToken));
+  if (sessionId) {
+    await deleteAdminSession(sessionId);
   }
 
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(adminSessionCookieName, "", {
-    ...adminSessionCookieOptions,
+  res.cookies.set(adminAccessTokenCookieName, "", {
+    ...adminAccessTokenCookieOptions,
+    maxAge: 0
+  });
+  res.cookies.set(adminRefreshTokenCookieName, "", {
+    ...adminRefreshTokenCookieOptions,
     maxAge: 0
   });
   return res;
