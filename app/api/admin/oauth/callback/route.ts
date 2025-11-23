@@ -12,12 +12,12 @@ export async function GET(request: Request) {
   const storedState = cookieStore.get("oauth_state")?.value;
 
   if (!code || !state || !storedState || state !== storedState) {
-    return NextResponse.redirect("/admin?error=oauth_state");
+    return NextResponse.redirect(new URL("/admin?error=oauth_state", request.url));
   }
 
   const config = await prisma.appConfig.findFirst({ orderBy: { id: "desc" } });
   if (!config) {
-    return NextResponse.redirect("/admin?error=config-missing");
+    return NextResponse.redirect(new URL("/admin?error=config-missing", request.url));
   }
 
   try {
@@ -26,12 +26,12 @@ export async function GET(request: Request) {
       clientId: config.clientId,
       clientSecret: config.clientSecret
     });
-    const res = NextResponse.redirect("/admin?success=oauth");
+    const res = NextResponse.redirect(new URL("/admin?success=oauth", request.url));
     res.cookies.delete("oauth_state");
     return res;
   } catch (err) {
     return NextResponse.redirect(
-      `/admin?error=${encodeURIComponent((err as Error).message)}`
+      new URL(`/admin?error=${encodeURIComponent((err as Error).message)}`, request.url)
     );
   }
 }

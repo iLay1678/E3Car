@@ -20,6 +20,8 @@ ENTRA_TENANT_DOMAIN="yourtenant.onmicrosoft.com"
 OAUTH_REDIRECT_URI="http://localhost:3000/api/admin/oauth/callback"
 ADMIN_PASSWORD="some-strong-password"
 DATABASE_URL="file:./dev.db"
+OFFICE_E3_SKU_ID="optional-office-e3-sku-guid"
+ENTRA_USAGE_LOCATION="CN" # 两位国家/地区代码，用于许可证分配，默认 CN
 ```
 
 ## 本地运行

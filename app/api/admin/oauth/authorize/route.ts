@@ -3,16 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { buildAuthorizeUrl } from "@/lib/oauth";
 import { requireAdminSession } from "@/lib/admin";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     requireAdminSession();
   } catch (err) {
-    return NextResponse.redirect("/admin?error=unauthorized");
+    return NextResponse.redirect(new URL("/admin?error=unauthorized", request.url));
   }
 
   const config = await prisma.appConfig.findFirst({ orderBy: { id: "desc" } });
   if (!config) {
-    return NextResponse.redirect("/admin?error=config-missing");
+    return NextResponse.redirect(new URL("/admin?error=config-missing", request.url));
   }
 
   const state = Math.random().toString(36).slice(2);

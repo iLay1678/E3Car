@@ -15,6 +15,7 @@ export async function GET() {
     hasConfig: !!config,
     clientId: config?.clientId ?? null,
     hasSecret: Boolean(config?.clientSecret),
+    licenseSkuId: config?.licenseSkuId ?? null,
     updatedAt: config?.updatedAt ?? null,
     token: token
       ? {
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
   const body = await request.json().catch(() => ({}));
-  const { clientId, clientSecret } = body;
+  const { clientId, clientSecret, licenseSkuId } = body;
   if (!clientId || !clientSecret) {
     return NextResponse.json({ error: "Client ID 和 Client Secret 均不能为空" }, { status: 400 });
   }
@@ -43,10 +44,10 @@ export async function POST(request: Request) {
   if (existing) {
     await prisma.appConfig.update({
       where: { id: existing.id },
-      data: { clientId, clientSecret }
+      data: { clientId, clientSecret, licenseSkuId: licenseSkuId || null }
     });
   } else {
-    await prisma.appConfig.create({ data: { clientId, clientSecret } });
+    await prisma.appConfig.create({ data: { clientId, clientSecret, licenseSkuId: licenseSkuId || null } });
   }
 
   return NextResponse.json({ ok: true });

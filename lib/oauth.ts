@@ -20,8 +20,13 @@ export function buildAuthorizeUrl(clientId: string, state: string) {
     response_type: "code",
     redirect_uri: redirectUri,
     response_mode: "query",
-    scope:
-      "offline_access https://graph.microsoft.com/User.ReadWrite.All openid profile",
+    scope: [
+      "offline_access",
+      "openid",
+      "profile",
+      "https://graph.microsoft.com/User.ReadWrite.All",
+      "https://graph.microsoft.com/Directory.ReadWrite.All"
+    ].join(" "),
     state
   });
   return `${authorizeEndpoint}?${params.toString()}`;
@@ -50,7 +55,11 @@ export async function exchangeCodeForToken({
     grant_type: "authorization_code",
     code,
     redirect_uri: redirectUri,
-    scope: "offline_access https://graph.microsoft.com/User.ReadWrite.All"
+    scope: [
+      "offline_access",
+      "https://graph.microsoft.com/User.ReadWrite.All",
+      "https://graph.microsoft.com/Directory.ReadWrite.All"
+    ].join(" ")
   });
 
   const res = await fetch(tokenEndpoint, {
@@ -92,7 +101,11 @@ export async function refreshAccessToken({
     client_secret: clientSecret,
     grant_type: "refresh_token",
     refresh_token: refreshToken,
-    scope: "offline_access https://graph.microsoft.com/User.ReadWrite.All"
+    scope: [
+      "offline_access",
+      "https://graph.microsoft.com/User.ReadWrite.All",
+      "https://graph.microsoft.com/Directory.ReadWrite.All"
+    ].join(" ")
   });
 
   const res = await fetch(tokenEndpoint, {

@@ -3,6 +3,8 @@ import { refreshAccessToken } from "./oauth";
 
 const tenantDomain = process.env.ENTRA_TENANT_DOMAIN;
 const tenantId = process.env.ENTRA_TENANT_ID;
+const officeE3SkuId = process.env.OFFICE_E3_SKU_ID;
+const usageLocation = process.env.ENTRA_USAGE_LOCATION || "CN";
 
 if (!tenantDomain) {
   throw new Error("ENTRA_TENANT_DOMAIN is required");
@@ -15,7 +17,7 @@ async function getLatestToken() {
   return prisma.adminToken.findFirst({ orderBy: { obtainedAt: "desc" } });
 }
 
-async function getAppConfig() {
+export async function getAppConfig() {
   return prisma.appConfig.findFirst({ orderBy: { id: "desc" } });
 }
 
@@ -67,6 +69,41 @@ function generatePassword() {
   return pwd;
 }
 
+async function assignOfficeE3License(userId: string, skuId?: string | null) {
+  const skuToAssign = skuId || officeE3SkuId;
+  if (!skuToAssign) {
+    return;
+  }
+  const accessToken = await getAdminAccessToken();
+  const res = await fetch(`https://graph.microsoft.com/v1.0/users/${userId}/assignLicense`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`
+    },
+    body: JSON.stringify({
+      addLicenses: [{ skuId: skuToAssign }],
+      removeLicenses: []
+    })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to assign Office 365 E3 license: ${res.status} ${text}`);
+  }
+}
+
+async function deleteGraphUser(userId: string) {
+  const accessToken = await getAdminAccessToken();
+  await fetch(`https://graph.microsoft.com/v1.0/users/${userId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  }).catch(() => {
+    // Best-effort cleanup; ignore errors.
+  });
+}
+
 export async function createEnterpriseUser({
   displayName,
   localPart
@@ -90,6 +127,7 @@ export async function createEnterpriseUser({
       displayName,
       mailNickname,
       userPrincipalName,
+      usageLocation,
       passwordProfile: {
         forceChangePasswordNextSignIn: true,
         password
@@ -103,6 +141,16 @@ export async function createEnterpriseUser({
   }
 
   const data = (await res.json()) as { id: string };
+
+  // Try to assign Office 365 E3 automatically if configured.
+  try {
+    const config = await getAppConfig();
+    await assignOfficeE3License(data.id, config?.licenseSkuId);
+  } catch (err) {
+    await deleteGraphUser(data.id);
+    throw err;
+  }
+
   const user = await prisma.enterpriseUser.create({
     data: {
       graphUserId: data.id,

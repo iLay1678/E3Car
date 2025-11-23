@@ -36,17 +36,19 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">使用兑换码创建企业账户</h1>
+    <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
+      <h1 className="text-3xl font-bold mb-6 sm:mb-8 text-gray-900">
+        使用兑换码创建企业账户
+      </h1>
       {!result && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white shadow rounded p-6 space-y-4"
+          className="bg-white shadow rounded p-5 sm:p-6 space-y-4 sm:space-y-5 border border-gray-100"
         >
           <div>
             <label className="block text-sm font-medium mb-1">显示名</label>
             <input
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               required
@@ -57,7 +59,7 @@ export default function Home() {
               账号前缀（可选，留空将自动生成）
             </label>
             <input
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
               value={localPart}
               onChange={(e) => setLocalPart(e.target.value)}
             />
@@ -65,7 +67,7 @@ export default function Home() {
           <div>
             <label className="block text-sm font-medium mb-1">兑换码</label>
             <input
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
               required
@@ -73,7 +75,7 @@ export default function Home() {
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            className="w-full bg-blue-600 text-white py-2.5 rounded hover:bg-blue-700 transition-colors font-medium"
             disabled={loading}
           >
             {loading ? "提交中..." : "创建企业账户"}
@@ -83,19 +85,21 @@ export default function Home() {
       )}
 
       {result && (
-        <div className="bg-green-50 border border-green-200 rounded p-6 space-y-3">
+        <div className="bg-green-50 border border-green-200 rounded p-5 sm:p-6 space-y-3">
           <h2 className="text-2xl font-semibold text-green-700">创建成功</h2>
-          <p>
-            企业账户：<span className="font-mono">{result.userPrincipalName}</span>
-          </p>
-          <p className="text-sm text-gray-700">
-            初始密码：<span className="font-mono">{result.password}</span>
-          </p>
-          <p className="text-sm text-gray-600">
+          <div className="grid sm:grid-cols-2 gap-3 text-sm sm:text-base">
+            <p className="break-all">
+              企业账户：<span className="font-mono">{result.userPrincipalName}</span>
+            </p>
+            <p className="text-gray-700">
+              初始密码：<span className="font-mono">{result.password}</span>
+            </p>
+          </div>
+          <p className="text-sm text-gray-600 leading-relaxed">
             请使用该账号登录 Microsoft 365/Entra，首次登录需要修改密码。
           </p>
           <button
-            className="text-blue-700 underline"
+            className="text-blue-700 underline font-medium"
             onClick={() => {
               setResult(null);
               setDisplayName("");

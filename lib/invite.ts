@@ -1,13 +1,23 @@
 import { prisma } from "./prisma";
 
 export async function createInviteCodes(count: number) {
-  const codes = Array.from({ length: count }).map(() =>
-    `INV-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-  );
-  await prisma.inviteCode.createMany({
-    data: codes.map((code) => ({ code })),
-    skipDuplicates: true
-  });
+  const codes: string[] = [];
+  const attempted = new Set<string>();
+
+  while (codes.length < count) {
+    const code = `INV-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    if (attempted.has(code)) continue;
+    attempted.add(code);
+    try {
+      await prisma.inviteCode.create({ data: { code } });
+      codes.push(code);
+    } catch (err) {
+      // Unique constraint hit; regenerate and retry.
+      if ((err as { code?: string }).code === "P2002") continue;
+      throw err;
+    }
+  }
+
   return codes;
 }
 
