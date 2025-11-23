@@ -5,7 +5,7 @@ import { requireAdminSession } from "@/lib/admin";
 
 export async function GET(request: Request) {
   try {
-    requireAdminSession();
+    await requireAdminSession();
   } catch (err) {
     return NextResponse.redirect(new URL("/admin?error=unauthorized", request.url));
   }

@@ -4,7 +4,7 @@ import { getAdminAccessToken } from "@/lib/graph";
 
 export async function GET() {
   try {
-    requireAdminSession();
+    await requireAdminSession();
   } catch (err) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }

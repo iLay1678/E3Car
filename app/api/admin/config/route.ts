@@ -4,7 +4,7 @@ import { requireAdminSession } from "@/lib/admin";
 
 export async function GET() {
   try {
-    requireAdminSession();
+    await requireAdminSession();
   } catch (err) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
@@ -30,7 +30,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    requireAdminSession();
+    await requireAdminSession();
   } catch (err) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
