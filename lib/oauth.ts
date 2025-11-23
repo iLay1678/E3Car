@@ -1,15 +1,15 @@
 import { prisma } from "./prisma";
 
-const tenantId = process.env.ENTRA_TENANT_ID;
-const redirectUri = process.env.OAUTH_REDIRECT_URI;
-
-if (!tenantId) {
-  throw new Error("ENTRA_TENANT_ID is required");
+function requireEnv(key: string) {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`${key} is required`);
+  }
+  return value;
 }
 
-if (!redirectUri) {
-  throw new Error("OAUTH_REDIRECT_URI is required");
-}
+const tenantId = requireEnv("ENTRA_TENANT_ID");
+const redirectUri = requireEnv("OAUTH_REDIRECT_URI");
 
 const tokenEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
 
@@ -18,7 +18,7 @@ export function buildAuthorizeUrl(clientId: string, state: string) {
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: "code",
-    redirect_uri: redirectUri,
+    redirect_uri: redirectUri ?? "",
     response_mode: "query",
     scope: [
       "offline_access",
