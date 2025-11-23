@@ -1,48 +1,58 @@
 # Entra Invite Redemption
 
-一个基于 Next.js 14 + Prisma 的示例系统，管理员配置 Microsoft Graph 应用并完成 OAuth 授权，向用户分发兑换码，用户通过兑换码自动在 Entra（Azure AD）中创建企业账户。
+一个基于 Next.js 14 + Prisma 的示例：管理员配置 Microsoft Graph 应用并完成 OAuth 授权，批量分发兑换码，用户用兑换码在 Entra（Azure AD）自动创建企业账户，可选自动分配 Office 365 E3 许可证。
 
-## 技术栈
+## 快速开始（本地）
 
-- Next.js 14（App Router）
-- TypeScript
-- Tailwind CSS
-- Prisma + SQLite
-- 手写 Microsoft OAuth 2.0 + Graph API 调用
-
-## 环境变量
-
-在项目根目录创建 `.env`，示例：
-
-```env
-ENTRA_TENANT_ID="your-tenant-id"
-ENTRA_TENANT_DOMAIN="yourtenant.onmicrosoft.com"
-OAUTH_REDIRECT_URI="http://localhost:3000/api/admin/oauth/callback"
-ADMIN_PASSWORD="some-strong-password"
-DATABASE_URL="file:./dev.db"
-OFFICE_E3_SKU_ID="optional-office-e3-sku-guid"
-ENTRA_USAGE_LOCATION="CN" # 两位国家/地区代码，用于许可证分配，默认 CN
-```
-
-## 本地运行
-
+1) 准备环境：Node 18+，npm；克隆仓库后执行 `npm install`。  
+2) 创建数据库并生成客户端：
 ```bash
-npm install
 npx prisma migrate dev --name init
+```
+3) 在根目录创建 `.env`（示例见下），再启动：
+```bash
 npm run dev
 ```
+本地地址 `http://localhost:3000`，后台 `http://localhost:3000/admin`。
 
-## Azure Portal 基本配置
+## 必填/可选环境变量
 
-1. 在 Azure Portal 创建一个 App Registration。
-2. 记录 Tenant ID 和 onmicrosoft.com 域名（填入 `.env`）。
-3. 在应用中配置 Redirect URI：`http://localhost:3000/api/admin/oauth/callback`。
-4. 创建 Client Secret 并妥善保存。
-5. 将 Client ID / Client Secret 填入后台 `/admin` 后点击“管理员授权”完成 OAuth 同意。
+```env
+ENTRA_TENANT_ID="目录(租户)ID"
+ENTRA_TENANT_DOMAIN="yourtenant.onmicrosoft.com"
+OAUTH_REDIRECT_URI="http://localhost:3000/api/admin/oauth/callback"
+ADMIN_PASSWORD="自定义后台密码"
+DATABASE_URL="file:./dev.db"
+OFFICE_E3_SKU_ID="可选，Office 365 E3 的 skuId，用于自动分配许可证"
+ENTRA_USAGE_LOCATION="CN" # 许可证使用地，两位国家/地区代码，默认 CN
+```
 
-## 使用流程
+## 在 Azure Portal 配置 Entra 应用
 
-1. 管理员访问 `/admin`，使用 `ADMIN_PASSWORD` 登录。
-2. 填写 Client ID / Client Secret 并保存，然后点击“前往管理员授权”完成一次性授权。
-3. 在后台创建兑换码（可批量）。
-4. 用户访问 `/`，输入显示名和兑换码，系统验证后调用 Graph API 创建企业账户并返回账号信息。
+1) App Registration：创建应用，账户类型选“仅此组织目录”。  
+2) 重定向 URI：添加 `http://localhost:3000/api/admin/oauth/callback`（生产环境改成你的域名）。  
+3) 创建 Client Secret，记下“值”。  
+4) API 权限（委派）：`User.ReadWrite.All`、`Directory.ReadWrite.All`，点击“授予管理员同意”。  
+5) 记录 Tenant ID、onmicrosoft.com 域名，写入 `.env`。
+
+## 后台操作流程
+
+1) 访问 `/admin`，使用 `ADMIN_PASSWORD` 登录。  
+2) 填写 Client ID / Client Secret → 保存 → 点击“前往管理员授权”并用管理员账号同意。  
+3) （可选）点击“拉取 SKU”获取订阅，选择 Office 365 E3（ENTERPRISEPACK）以自动分配许可证。  
+4) 创建兑换码（批量或单个）。  
+5) 用户访问 `/` 输入显示名和兑换码，系统创建账户并返回 UPN + 初始密码。
+
+## 常见问题
+
+- 授权回调 400/invalid_grant：同一个 code 只能用一次，请重新点击“管理员授权”。  
+- 403 获取 SKU：确保已管理员同意 `Directory.ReadWrite.All`，并使用有目录/许可证管理权限的账号授权。  
+- 分配许可证报 “invalid usage location”：在 `.env` 设置 `ENTRA_USAGE_LOCATION`（如 `CN`/`US`），重启后再试。  
+- UPN 冲突：当前未自动重命名，如同名会报错，可在前端填写唯一前缀或自行改造重试逻辑。
+
+## 常用命令
+
+- 开发：`npm run dev`  
+- 构建/生产：`npm run build` && `npm start`  
+- Lint：`npm run lint`  
+- 数据库：`npx prisma migrate dev --name <tag>`、`npx prisma generate`
