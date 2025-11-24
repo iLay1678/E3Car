@@ -582,8 +582,7 @@ export default function AdminPage() {
                           )}
                         </td>
                         <td className="py-2 px-2 text-right">
-<<<<<<< HEAD
-                          {!invite.used && (
+                          {!invite.used ? (
                             <button
                               className="text-red-600 hover:underline"
                               onClick={() => {
@@ -592,15 +591,14 @@ export default function AdminPage() {
                             >
                               作废
                             </button>
+                          ) : (
+                            <button
+                              className="text-red-600 hover:underline"
+                              onClick={() => handleDelete(invite.code)}
+                            >
+                              删除
+                            </button>
                           )}
-=======
-                          <button
-                            className="text-red-600 hover:underline"
-                            onClick={() => handleDelete(invite.code)}
-                          >
-                            删除
-                          </button>
->>>>>>> feeb82c (Add password reset flow and admin copy helpers)
                         </td>
                       </tr>
                     ))}
