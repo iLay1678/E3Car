@@ -14,26 +14,22 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RedeemResponse | null>(null);
-<<<<<<< HEAD
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
-
-  async function handleCopy(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopyMessage(`已复制：${text}`);
-      setTimeout(() => setCopyMessage(null), 2000);
-    } catch {
-      setCopyMessage("复制失败，请手动选择复制");
-      setTimeout(() => setCopyMessage(null), 2000);
-    }
-  }
-=======
   const [resetUserPrincipalName, setResetUserPrincipalName] = useState("");
   const [resetInviteCode, setResetInviteCode] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<RedeemResponse | null>(null);
->>>>>>> feeb82c (Add password reset flow and admin copy helpers)
+
+  async function handleCopy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyMessage(`已复制：${text}`);
+    } catch {
+      setCopyMessage("复制失败，请手动选择复制");
+    }
+    setTimeout(() => setCopyMessage(null), 2000);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,24 +76,9 @@ export default function Home() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
-<<<<<<< HEAD
       <div className="space-y-2 sm:space-y-3 mb-6 sm:mb-8">
         <h1 className="heading">使用兑换码创建企业账户</h1>
         <p className="text-gray-700">按步骤完成授权与兑换，系统将为你的组织自动创建企业账户，并可选择分配 Office 365 E3。</p>
-      </div>
-      <div className="grid sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <div className="card p-4">
-          <div className="text-sm font-semibold text-gray-900 mb-1">步骤 1</div>
-          <p className="text-sm text-gray-700">管理员在后台完成 Graph 配置与授权</p>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm font-semibold text-gray-900 mb-1">步骤 2</div>
-          <p className="text-sm text-gray-700">创建并分发兑换码给用户</p>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm font-semibold text-gray-900 mb-1">步骤 3</div>
-          <p className="text-sm text-gray-700">用户在此输入兑换码创建企业账户</p>
-        </div>
       </div>
       {!result && (
         <form
@@ -144,98 +125,32 @@ export default function Home() {
             {loading ? "提交中..." : "创建企业账户"}
           </button>
           {error && <p className="text-red-600 text-sm" role="alert" aria-live="polite">{error}</p>}
-          {copyMessage && (
-            <p className="text-green-700 text-sm" role="status" aria-live="polite">{copyMessage}</p>
-          )}
         </form>
       )}
 
       {result && (
         <div className="bg-green-50 border border-green-200 rounded p-5 sm:p-6 space-y-3">
           <h2 className="text-2xl font-semibold text-green-700">创建成功</h2>
+          {copyMessage && (
+            <p className="text-green-700 text-sm" role="status" aria-live="polite">{copyMessage}</p>
+          )}
           <div className="grid sm:grid-cols-2 gap-3 text-sm sm:text-base">
-            <p className="break-all">
-              企业账户：<span className="font-mono">{result.userPrincipalName}</span>
-              <button
-                className="ml-2 link"
-                onClick={() => handleCopy(result.userPrincipalName)}
-              >
-                复制
-              </button>
-            </p>
-            <p className="text-gray-700">
-              初始密码：<span className="font-mono">{result.password}</span>
-              <button
-                className="ml-2 link"
-                onClick={() => handleCopy(result.password)}
-              >
-                复制
-              </button>
-=======
-      <h1 className="text-3xl font-bold mb-6 sm:mb-8 text-gray-900">
-        使用兑换码创建企业账户
-      </h1>
-      <section className="space-y-4 sm:space-y-5">
-        <h2 className="text-2xl font-semibold text-gray-900">创建新企业账户</h2>
-        {!result && (
-          <form
-            onSubmit={handleSubmit}
-            className="bg-white shadow rounded p-5 sm:p-6 space-y-4 sm:space-y-5 border border-gray-100"
-          >
-            <div>
-              <label className="block text-sm font-medium mb-1">显示名</label>
-              <input
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                账号前缀（可选，留空将自动生成）
-              </label>
-              <input
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                value={localPart}
-                onChange={(e) => setLocalPart(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">兑换码</label>
-              <input
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-2.5 rounded hover:bg-blue-700 transition-colors font-medium"
-              disabled={loading}
-            >
-              {loading ? "提交中..." : "创建企业账户"}
-            </button>
-            {error && <p className="text-red-600 text-sm">{error}</p>}
-          </form>
-        )}
-
-        {result && (
-          <div className="bg-green-50 border border-green-200 rounded p-5 sm:p-6 space-y-3">
-            <h3 className="text-xl font-semibold text-green-700">创建成功</h3>
-            <div className="grid sm:grid-cols-2 gap-3 text-sm sm:text-base">
-              <p className="break-all">
+            <div className="flex flex-wrap items-center gap-2 break-all">
+              <span>
                 企业账户：<span className="font-mono">{result.userPrincipalName}</span>
-              </p>
-              <p className="text-gray-700">
-                初始密码：<span className="font-mono">{result.password}</span>
-              </p>
+              </span>
+              <button className="link" onClick={() => handleCopy(result.userPrincipalName)}>
+                复制
+              </button>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              请使用该账号登录 Microsoft 365/Entra，首次登录需要修改密码。
->>>>>>> feeb82c (Add password reset flow and admin copy helpers)
-            </p>
+            <div className="flex flex-wrap items-center gap-2 text-gray-700">
+              <span>
+                初始密码：<span className="font-mono">{result.password}</span>
+              </span>
+              <button className="link" onClick={() => handleCopy(result.password)}>
+                复制
+              </button>
+            </div>
             <button
               className="text-blue-700 underline font-medium"
               onClick={() => {
@@ -248,58 +163,74 @@ export default function Home() {
               返回继续创建
             </button>
           </div>
-        )}
-      </section>
+        </div>
+      )}
 
       <section className="space-y-4 sm:space-y-5 mt-10">
         <h2 className="text-2xl font-semibold text-gray-900">兑换码 + 账号重置密码</h2>
+        <p className="text-sm text-gray-600">
+          同时提供兑换码和对应的用户账号才能重置密码，防止被滥用。
+        </p>
         {!resetResult && (
           <form
             onSubmit={handleResetSubmit}
-            className="bg-white shadow rounded p-5 sm:p-6 space-y-4 sm:space-y-5 border border-gray-100"
+            className="card p-5 sm:p-6 space-y-4 sm:space-y-5"
           >
             <div>
-              <label className="block text-sm font-medium mb-1">用户账号（userPrincipalName）</label>
+              <label htmlFor="resetUser" className="block text-sm font-medium mb-1">用户账号（userPrincipalName）</label>
               <input
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="input"
+                id="resetUser"
                 value={resetUserPrincipalName}
                 onChange={(e) => setResetUserPrincipalName(e.target.value)}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">兑换码</label>
+              <label htmlFor="resetCode" className="block text-sm font-medium mb-1">兑换码</label>
               <input
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="input"
+                id="resetCode"
                 value={resetInviteCode}
                 onChange={(e) => setResetInviteCode(e.target.value)}
                 required
               />
             </div>
-            <p className="text-sm text-gray-500">
-              同时提供兑换码和对应的用户账号才能重置密码，防止被滥用。
-            </p>
             <button
               type="submit"
-              className="w-full bg-indigo-600 text-white py-2.5 rounded hover:bg-indigo-700 transition-colors font-medium"
+              className="btn btn-primary w-full"
               disabled={resetLoading}
+              aria-busy={resetLoading}
             >
               {resetLoading ? "重置中..." : "重置密码"}
             </button>
-            {resetError && <p className="text-red-600 text-sm">{resetError}</p>}
+            {resetError && <p className="text-red-600 text-sm" role="alert" aria-live="polite">{resetError}</p>}
           </form>
         )}
 
         {resetResult && (
           <div className="bg-green-50 border border-green-200 rounded p-5 sm:p-6 space-y-3">
             <h3 className="text-xl font-semibold text-green-700">密码重置成功</h3>
+            {copyMessage && (
+              <p className="text-green-700 text-sm" role="status" aria-live="polite">{copyMessage}</p>
+            )}
             <div className="grid sm:grid-cols-2 gap-3 text-sm sm:text-base">
-              <p className="break-all">
-                企业账户：<span className="font-mono">{resetResult.userPrincipalName}</span>
-              </p>
-              <p className="text-gray-700">
-                新密码：<span className="font-mono">{resetResult.password}</span>
-              </p>
+              <div className="flex flex-wrap items-center gap-2 break-all">
+                <span>
+                  企业账户：<span className="font-mono">{resetResult.userPrincipalName}</span>
+                </span>
+                <button className="link" onClick={() => handleCopy(resetResult.userPrincipalName)}>
+                  复制
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-gray-700">
+                <span>
+                  新密码：<span className="font-mono">{resetResult.password}</span>
+                </span>
+                <button className="link" onClick={() => handleCopy(resetResult.password)}>
+                  复制
+                </button>
+              </div>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed">
               请尽快登录并修改密码，避免泄漏。
