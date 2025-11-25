@@ -56,6 +56,7 @@ export default function AdminPage() {
   >([]);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
+  const [confirming, setConfirming] = useState<null | { type: "revoke" | "delete"; code: string }>(null);
   const unusedCodes = invites.filter((invite) => !invite.used).map((invite) => invite.code);
   const usedCodes = invites.filter((invite) => invite.used).map((invite) => invite.code);
 
@@ -585,16 +586,14 @@ export default function AdminPage() {
                           {!invite.used ? (
                             <button
                               className="text-red-600 hover:underline"
-                              onClick={() => {
-                                if (confirm("确定要作废该兑换码吗？")) handleRevoke(invite.code);
-                              }}
+                              onClick={() => setConfirming({ type: "revoke", code: invite.code })}
                             >
                               作废
                             </button>
                           ) : (
                             <button
                               className="text-red-600 hover:underline"
-                              onClick={() => handleDelete(invite.code)}
+                              onClick={() => setConfirming({ type: "delete", code: invite.code })}
                             >
                               删除
                             </button>
@@ -647,6 +646,37 @@ export default function AdminPage() {
               ))}
             </div>
           </section>
+          )}
+          {confirming && (
+            <div className="modal-overlay" role="dialog" aria-modal="true">
+              <div className="modal">
+                <div className="text-lg font-semibold mb-2">
+                  {confirming.type === "revoke" ? "作废兑换码" : "删除兑换码"}
+                </div>
+                <p className="text-sm text-gray-700">
+                  {confirming.type === "revoke"
+                    ? "确定要作废该兑换码吗？作废后无法使用。"
+                    : "确定要删除该兑换码吗？该操作不可恢复。"}
+                </p>
+                <p className="mt-2 font-mono text-sm">{confirming.code}</p>
+                <div className="mt-4 flex gap-2 justify-end">
+                  <button className="btn btn-secondary" onClick={() => setConfirming(null)}>取消</button>
+                  <button
+                    className="btn btn-danger"
+                    onClick={async () => {
+                      if (confirming.type === "revoke") {
+                        await handleRevoke(confirming.code);
+                      } else {
+                        await handleDelete(confirming.code);
+                      }
+                      setConfirming(null);
+                    }}
+                  >
+                    {confirming.type === "revoke" ? "作废" : "删除"}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </>
       )}
