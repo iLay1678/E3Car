@@ -26,18 +26,21 @@ export default function OrderList({ initialOrders }: { initialOrders: Order[] })
     useEffect(() => {
         // Auto check if returning from payment with a specific trade no
         // e.g. /orders?check=ORD...
+        // e.g. /orders?check=ORD...&trade_no=...
         const checkTradeNo = searchParams.get("check");
+        const gatewayTradeNo = searchParams.get("trade_no");
         if (checkTradeNo) {
-            handleCheckStatus(checkTradeNo);
+            handleCheckStatus(checkTradeNo, gatewayTradeNo || undefined);
         }
     }, [searchParams]);
 
-    async function handleCheckStatus(tradeNo: string) {
+    async function handleCheckStatus(tradeNo: string, gatewayTradeNo?: string) {
+        console.log("[OrderList] Initiating check for:", tradeNo, "GatewayNo:", gatewayTradeNo);
         setChecking(tradeNo);
         try {
             const res = await fetch("/api/pay/check", {
                 method: "POST",
-                body: JSON.stringify({ out_trade_no: tradeNo }),
+                body: JSON.stringify({ out_trade_no: tradeNo, trade_no: gatewayTradeNo }),
                 headers: { "Content-Type": "application/json" }
             });
             const data = await res.json();
@@ -55,6 +58,7 @@ export default function OrderList({ initialOrders }: { initialOrders: Order[] })
     }
 
     async function handlePayNow(tradeNo: string) {
+        console.log("[OrderList] Initiating pay now for:", tradeNo);
         setPaying(tradeNo);
         try {
             const res = await fetch("/api/pay/submit", { 
@@ -63,21 +67,12 @@ export default function OrderList({ initialOrders }: { initialOrders: Order[] })
                 headers: { "Content-Type": "application/json" }
             });
             const data = await res.json();
-            if (data.url && data.params) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = data.url;
-                for (const [key, value] of Object.entries(data.params)) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = key;
-                    input.value = String(value);
-                    form.appendChild(input);
-                }
-                document.body.appendChild(form);
-                form.submit();
+            if (res.ok && data.url) {
+                // Server-side submission successful, redirect to payment page
+                window.location.href = data.url;
             } else {
-                alert(data.error || "支付跳转失败");
+                alert("Payment Error: " + (data.error || "Unknown error"));
+                setPaying(null);
             }
         } catch (err) {
             console.error(err);
