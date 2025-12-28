@@ -10,12 +10,27 @@ datasource db {
 }
 
 model AppConfig {
-  id           Int      @id @default(autoincrement())
+  id           Int     @id @default(autoincrement())
   clientId     String
   clientSecret String
+  tenantId     String?
   licenseSkuId String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+
+  // OAuth Configuration
+  authClientId     String?
+  authClientSecret String?
+  authUrl          String?
+  tokenUrl         String?
+  userUrl          String?
+
+  // Payment Configuration
+  epayPid     String?
+  epayKey     String?
+  epayUrl     String?  @default("https://credit.linux.do/epay")
+  invitePrice Decimal? @default(10.00)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AdminToken {
@@ -29,14 +44,49 @@ model AdminToken {
   obtainedAt   DateTime @default(now())
 }
 
-model InviteCode {
-  id               Int      @id @default(autoincrement())
-  code             String   @unique
-  used             Boolean  @default(false)
-  usedAt           DateTime?
-  createdAt        DateTime @default(now())
-  enterpriseUserId Int?
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  nickname  String?
+  avatar    String?
+  createdAt DateTime @default(now())
 
+  orders  Order[]
+  invites InviteCode[]
+}
+
+model Order {
+  id         Int      @id @default(autoincrement())
+  tradeNo    String   @unique
+  apiTradeNo String?
+  amount     Decimal
+  status     String   @default("PENDING") // PENDING, PAID, CANCELLED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  inviteCode InviteCode?
+}
+
+model InviteCode {
+  id        Int       @id @default(autoincrement())
+  code      String    @unique
+  used      Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  source String @default("MANUAL") // MANUAL, PURCHASE
+
+  // Relations
+  orderId Int?   @unique
+  order   Order? @relation(fields: [orderId], references: [id])
+
+  ownerId Int?
+  owner   User? @relation(fields: [ownerId], references: [id])
+
+  enterpriseUserId Int?
   enterpriseUser   EnterpriseUser? @relation("UserInvites", fields: [enterpriseUserId], references: [id])
 }
 

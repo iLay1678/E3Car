@@ -25,11 +25,50 @@ export async function createInviteCode(code: string) {
   return prisma.inviteCode.create({ data: { code } });
 }
 
-export async function listInviteCodes() {
+export async function createPurchasedInviteCode(userId: number, orderId: number) {
+  // Generate a random code
+  let code = "";
+  while (true) {
+    code = `INV-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const exists = await prisma.inviteCode.findUnique({ where: { code } });
+    if (!exists) break;
+  }
+
+  return prisma.inviteCode.create({
+    data: {
+      code,
+      source: "PURCHASE",
+      ownerId: userId,
+      orderId: orderId
+    }
+  });
+}
+
+export async function listInviteCodes(filter?: {
+  source?: string;
+  status?: "used" | "unused";
+  sort?: "asc" | "desc";
+}) {
+  const where: any = {};
+
+  if (filter?.source && filter.source !== "all") {
+    where.source = filter.source;
+  }
+
+  if (filter?.status) {
+    if (filter.status === "used") {
+      where.used = true;
+    } else if (filter.status === "unused") {
+      where.used = false;
+    }
+  }
+
   return prisma.inviteCode.findMany({
-    orderBy: { createdAt: "desc" },
+    where,
+    orderBy: { createdAt: filter?.sort || "desc" },
     include: {
-      enterpriseUser: true
+      enterpriseUser: true,
+      owner: true
     }
   });
 }

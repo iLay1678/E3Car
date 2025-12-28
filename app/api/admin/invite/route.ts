@@ -9,13 +9,19 @@ import {
   revokeInviteCode
 } from "@/lib/invite";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requireAdminSession();
   } catch (err) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
-  const invites = await listInviteCodes();
+
+  const { searchParams } = new URL(request.url);
+  const source = searchParams.get("source") || undefined;
+  const status = searchParams.get("status") as "used" | "unused" | undefined;
+  const sort = (searchParams.get("sort") as "asc" | "desc") || "desc";
+
+  const invites = await listInviteCodes({ source, status, sort });
   return NextResponse.json(invites);
 }
 

@@ -39,10 +39,15 @@ export async function getAdminAccessToken() {
     throw new Error("Token expired and no refresh token available.");
   }
 
+  if (!config.tenantId) {
+    throw new Error("Tenant ID is missing in AppConfig");
+  }
+
   const refreshed = await refreshAccessToken({
     refreshToken: token.refreshToken,
     clientId: config.clientId,
-    clientSecret: config.clientSecret
+    clientSecret: config.clientSecret,
+    tenantId: config.tenantId
   });
 
   return refreshed.access_token;
@@ -211,10 +216,14 @@ export async function refreshAdminGraphToken(force = false) {
   if (!config) {
     throw new Error("App config is missing. Save Client ID/Secret in admin console.");
   }
+  if (!config.tenantId) {
+    throw new Error("Tenant ID is missing in AppConfig");
+  }
   const refreshed = await refreshAccessToken({
     refreshToken: token.refreshToken,
     clientId: config.clientId,
-    clientSecret: config.clientSecret
+    clientSecret: config.clientSecret,
+    tenantId: config.tenantId
   });
   const latest = await getLatestToken();
   const expiresAt = latest?.expiresAt ?? new Date(Date.now() + refreshed.expires_in * 1000);

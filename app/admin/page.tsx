@@ -7,6 +7,18 @@ type ConfigResponse = {
   clientId: string | null;
   hasSecret: boolean;
   licenseSkuId: string | null;
+  
+  authClientId: string | null;
+  authClientSecret: string | null;
+  authUrl: string | null;
+  tokenUrl: string | null;
+  userUrl: string | null;
+
+  epayPid: string | null;
+  epayKey: string | null;
+  epayUrl: string | null;
+  invitePrice: string | number | null;
+
   updatedAt: string | null;
   token: {
     expiresAt: string;
@@ -22,15 +34,20 @@ type Invite = {
   used: boolean;
   usedAt: string | null;
   createdAt: string;
+  source: string;
+  owner?: {
+      email: string;
+      nickname?: string;
+  } | null;
   enterpriseUser?: {
     userPrincipalName: string;
   } | null;
 };
 
 const INVITES_PER_PAGE = 10;
-const ADMIN_ACCESS_REFRESH_INTERVAL_MS = 4 * 60 * 1000; // refresh admin session every 4 minutes
-const GRAPH_TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000; // refresh Graph token 5 minutes before expiry
-const GRAPH_TOKEN_MIN_REFRESH_MS = 60 * 1000; // at least 1 minute between refresh attempts
+const ADMIN_ACCESS_REFRESH_INTERVAL_MS = 4 * 60 * 1000;
+const GRAPH_TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+const GRAPH_TOKEN_MIN_REFRESH_MS = 60 * 1000;
 
 export default function AdminPage() {
   const [password, setPassword] = useState("");
@@ -40,8 +57,21 @@ export default function AdminPage() {
   const [configForm, setConfigForm] = useState({
     clientId: "",
     clientSecret: "",
-    licenseSkuId: ""
+    licenseSkuId: "",
+    authClientId: "",
+    authClientSecret: "",
+    authUrl: "",
+    tokenUrl: "",
+    userUrl: "",
+    epayPid: "",
+    epayKey: "",
+    epayUrl: "",
+    invitePrice: ""
   });
+  
+  const [filterSource, setFilterSource] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+
   const [invites, setInvites] = useState<Invite[]>([]);
   const [inviteCount, setInviteCount] = useState(5);
   const [inviteCode, setInviteCode] = useState("");
@@ -66,6 +96,7 @@ export default function AdminPage() {
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [confirming, setConfirming] = useState<{ type: "delete" | "revoke"; code: string } | null>(null);
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
+  
   const unusedCodes = invites.filter((invite) => !invite.used).map((invite) => invite.code);
   const usedCodes = invites.filter((invite) => invite.used).map((invite) => invite.code);
   const totalPages = Math.max(1, Math.ceil(invites.length / INVITES_PER_PAGE));
@@ -106,15 +137,27 @@ export default function AdminPage() {
     const data: ConfigResponse = await res.json();
     setAuthed(true);
     setConfig(data);
-    if (data.clientId) {
-      setConfigForm((prev) => ({
+    setConfigForm((prev) => ({
         ...prev,
         clientId: data.clientId ?? "",
-        licenseSkuId: data.licenseSkuId ?? ""
-      }));
-    }
+        clientSecret: data.hasSecret ? prev.clientSecret : "", // Don't wipe if user typing, but here usually loading
+        licenseSkuId: data.licenseSkuId ?? "",
+        authClientId: data.authClientId ?? "",
+        authClientSecret: data.authClientSecret ?? "",
+        authUrl: data.authUrl ?? "",
+        tokenUrl: data.tokenUrl ?? "",
+        userUrl: data.userUrl ?? "",
+        epayPid: data.epayPid ?? "",
+        epayKey: data.epayKey ?? "",
+        epayUrl: data.epayUrl ?? "",
+        invitePrice: data.invitePrice?.toString() ?? ""
+    }));
 
-    const inviteRes = await fetchWithAuth("/api/admin/invite");
+    const query = new URLSearchParams();
+    if (filterSource !== "all") query.set("source", filterSource);
+    if (filterStatus !== "all") query.set("status", filterStatus);
+
+    const inviteRes = await fetchWithAuth(`/api/admin/invite?${query.toString()}`);
     if (inviteRes.status === 401) {
       setAuthed(false);
       return;
@@ -124,11 +167,13 @@ export default function AdminPage() {
       setInvites(inviteData);
       setSelectedCodes([]);
     }
-  }, [fetchWithAuth]);
+  }, [fetchWithAuth, filterSource, filterStatus]);
 
   useEffect(() => {
-    fetchConfigAndInvites();
-  }, [fetchConfigAndInvites]);
+    if (authed) {
+        fetchConfigAndInvites();
+    }
+  }, [fetchConfigAndInvites, authed]);
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages));
@@ -232,7 +277,7 @@ export default function AdminPage() {
     }
     setAuthed(true);
     setMessage("登录成功");
-    fetchConfigAndInvites();
+    // fetch handled by useEffect
   }
 
   async function handleSaveConfig(e: React.FormEvent) {
@@ -532,107 +577,228 @@ export default function AdminPage() {
           )}
 
           {activeTab === "config" && (
-          <section className="card p-6">
-            <h2 className="text-xl font-semibold mb-4">Graph 应用配置</h2>
-            <form className="space-y-4" onSubmit={handleSaveConfig}>
-              <div>
-                <label htmlFor="clientId" className="block text-sm font-medium mb-1">Client ID</label>
-                <input
-                  className="input"
-                  value={configForm.clientId}
-                  onChange={(e) => setConfigForm({ ...configForm, clientId: e.target.value })}
-                  id="clientId"
-                />
-              </div>
-              <div>
-                <label htmlFor="clientSecret" className="block text-sm font-medium mb-1">Client Secret</label>
-                <input
-                  type="password"
-                  className="input"
-                  value={configForm.clientSecret}
-                  onChange={(e) =>
-                    setConfigForm({ ...configForm, clientSecret: e.target.value })
-                  }
-                  id="clientSecret"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <label htmlFor="licenseSkuId" className="block text-sm font-medium mb-1">自动分配 SKU</label>
-                  <select
-                    className="select"
-                    value={configForm.licenseSkuId}
-                    onChange={(e) => setConfigForm({ ...configForm, licenseSkuId: e.target.value })}
-                    id="licenseSkuId"
-                  >
-                    <option value="">不自动分配</option>
-                    {skus.map((sku) => (
-                      <option key={sku.skuId} value={sku.skuId}>
-                        {sku.name} ({sku.consumedUnits}/{sku.enabled || "∞"}) {sku.capabilityStatus}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    从订阅 SKU 中选择（如 Office 365 E3: ENTERPRISEPACK）。未选择则跳过授权。
-                  </p>
+          <section className="card p-6 space-y-8">
+            <div>
+                <h2 className="text-xl font-semibold mb-4">API & SKU 配置</h2>
+                <form className="space-y-4" onSubmit={handleSaveConfig}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">MS Graph Client ID</label>
+                        <input
+                        className="input"
+                        value={configForm.clientId}
+                        onChange={(e) => setConfigForm({ ...configForm, clientId: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">MS Graph Secret</label>
+                        <input
+                        type="password"
+                        className="input"
+                        value={configForm.clientSecret}
+                        onChange={(e) => setConfigForm({ ...configForm, clientSecret: e.target.value })}
+                        />
+                    </div>
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-secondary whitespace-nowrap"
-                  onClick={handleFetchSkus}
-                  disabled={loadingSkus || !config?.token}
-                  aria-busy={loadingSkus ? "true" : "false"}
-                >
-                  {loadingSkus ? "加载中..." : "拉取 SKU"}
-                </button>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <button
-                  type="submit"
-                  className="btn btn-primary w-full sm:w-auto"
-                  disabled={loading}
-                  aria-busy={loading ? "true" : "false"}
-                >
-                  保存配置
-                </button>
-                <a
-                  href="/api/admin/oauth/authorize"
-                  className="btn bg-purple-600 hover:bg-purple-700 text-white text-center w-full sm:w-auto"
-                >
-                  前往管理员授权
-                </a>
-              </div>
-              {config && (
-                <div className="text-sm text-gray-700 space-y-1">
-                  <div>已保存配置: {config.hasConfig ? "是" : "否"}</div>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <span>Token: {config.token ? "已存储" : "未获取"}</span>
-                    <button
-                      type="button"
-                      className="btn btn-secondary w-full sm:w-auto"
-                      onClick={handleRefreshGraphToken}
-                      disabled={!config.token || graphRefreshLoading}
-                      aria-busy={graphRefreshLoading ? "true" : "false"}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">OAuth Client ID</label>
+                        <input
+                        className="input"
+                        value={configForm.authClientId}
+                        onChange={(e) => setConfigForm({ ...configForm, authClientId: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">OAuth Secret</label>
+                        <input
+                        type="password"
+                        className="input"
+                        value={configForm.authClientSecret}
+                        onChange={(e) => setConfigForm({ ...configForm, authClientSecret: e.target.value })}
+                        />
+                    </div>
+                </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Auth URL (Base)</label>
+                        <input
+                        className="input"
+                        value={configForm.authUrl}
+                        onChange={(e) => setConfigForm({ ...configForm, authUrl: e.target.value })}
+                        placeholder="https://auth.example.com/authorize"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Token URL</label>
+                        <input
+                        className="input"
+                        value={configForm.tokenUrl}
+                        onChange={(e) => setConfigForm({ ...configForm, tokenUrl: e.target.value })}
+                        placeholder="https://auth.example.com/token"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">User URL</label>
+                        <input
+                        className="input"
+                        value={configForm.userUrl}
+                        onChange={(e) => setConfigForm({ ...configForm, userUrl: e.target.value })}
+                        placeholder="https://auth.example.com/userinfo"
+                        />
+                    </div>
+                 </div>
+
+                 <div className="border-t pt-4">
+                    <h3 className="font-medium mb-3">支付配置 (EasyPay)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div>
+                            <label className="block text-sm font-medium mb-1">PID (Merchant ID)</label>
+                            <input
+                            className="input"
+                            value={configForm.epayPid}
+                            onChange={(e) => setConfigForm({ ...configForm, epayPid: e.target.value })}
+                            />
+                       </div>
+                       <div>
+                            <label className="block text-sm font-medium mb-1">Key (Secret)</label>
+                            <input
+                            type="password"
+                            className="input"
+                            value={configForm.epayKey}
+                            onChange={(e) => setConfigForm({ ...configForm, epayKey: e.target.value })}
+                            />
+                       </div>
+                       <div>
+                            <label className="block text-sm font-medium mb-1">网关地址</label>
+                            <input
+                            className="input"
+                            value={configForm.epayUrl}
+                            onChange={(e) => setConfigForm({ ...configForm, epayUrl: e.target.value })}
+                            placeholder="https://credit.linux.do/epay"
+                            />
+                       </div>
+                       <div>
+                            <label className="block text-sm font-medium mb-1">邀请码价格</label>
+                            <input
+                            className="input"
+                            type="number"
+                            step="0.01"
+                            value={configForm.invitePrice}
+                            onChange={(e) => setConfigForm({ ...configForm, invitePrice: e.target.value })}
+                            />
+                       </div>
+                    </div>
+                 </div>
+
+                <div className="flex items-center gap-3 pt-4 border-t">
+                    <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">自动分配 SKU</label>
+                    <select
+                        className="select"
+                        value={configForm.licenseSkuId}
+                        onChange={(e) => setConfigForm({ ...configForm, licenseSkuId: e.target.value })}
                     >
-                      {graphRefreshLoading ? "刷新中..." : "手动刷新 Token"}
+                        <option value="">不自动分配</option>
+                        {skus.map((sku) => (
+                        <option key={sku.skuId} value={sku.skuId}>
+                            {sku.name} ({sku.consumedUnits}/{sku.enabled || "∞"}) {sku.capabilityStatus}
+                        </option>
+                        ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                        从订阅 SKU 中选择（如 Office 365 E3: ENTERPRISEPACK）。未选择则跳过授权。
+                    </p>
+                    </div>
+                    <button
+                        type="button"
+                        className="btn btn-secondary whitespace-nowrap self-end mb-1"
+                        onClick={handleFetchSkus}
+                        disabled={loadingSkus || !config?.token}
+                    >
+                        {loadingSkus ? "加载中..." : "拉取 SKU"}
                     </button>
-                  </div>
-                  {config.token && (
-                    <ul className="list-disc ml-5">
-                      <li>长度 {config.token.tokenLength}</li>
-                      <li>过期时间 {new Date(config.token.expiresAt).toLocaleString()}</li>
-                      <li>{config.token.expired ? "已过期" : "未过期"}</li>
-                    </ul>
-                  )}
                 </div>
-              )}
-            </form>
+                
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-4">
+                    <button
+                    type="submit"
+                    className="btn btn-primary w-full sm:w-auto"
+                    disabled={loading}
+                    aria-busy={loading ? "true" : "false"}
+                    >
+                    保存所有配置
+                    </button>
+                    <a
+                    href="/api/admin/oauth/authorize"
+                    className="btn bg-purple-600 hover:bg-purple-700 text-white text-center w-full sm:w-auto"
+                    >
+                    前往 MS Graph 管理员授权
+                    </a>
+                </div>
+
+                {config && (
+                  <div className="text-sm text-gray-700 space-y-1 mt-4 p-4 bg-gray-50 rounded">
+                    <div>Graph Token 状态:</div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <span>Token: {config.token ? "已存储" : "未获取"}</span>
+                      <button
+                        type="button"
+                        className="btn btn-secondary w-full sm:w-auto"
+                        onClick={handleRefreshGraphToken}
+                        disabled={!config.token || graphRefreshLoading}
+                      >
+                        {graphRefreshLoading ? "刷新中..." : "手动刷新 Token"}
+                      </button>
+                    </div>
+                    {config.token && (
+                      <ul className="list-disc ml-5">
+                        <li>长度 {config.token.tokenLength}</li>
+                        <li>过期时间 {new Date(config.token.expiresAt).toLocaleString()}</li>
+                        <li>{config.token.expired ? "已过期" : "未过期"}</li>
+                      </ul>
+                    )}
+                  </div>
+                )}
+                </form>
+            </div>
           </section>
           )}
 
           {activeTab === "invites" && (
           <section className="card p-6 space-y-4">
             <h2 className="text-xl font-semibold">兑换码管理</h2>
+            
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded border">
+                <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium">来源:</label>
+                    <select 
+                        className="select py-1 px-2 text-sm"
+                        value={filterSource}
+                        onChange={e => setFilterSource(e.target.value)}
+                    >
+                        <option value="all">全部</option>
+                        <option value="MANUAL">手动创建</option>
+                        <option value="PURCHASE">在线购买</option>
+                    </select>
+                </div>
+                <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium">状态:</label>
+                    <select 
+                         className="select py-1 px-2 text-sm"
+                         value={filterStatus}
+                         onChange={e => setFilterStatus(e.target.value)}
+                    >
+                        <option value="all">全部</option>
+                        <option value="used">已使用</option>
+                        <option value="unused">未使用</option>
+                    </select>
+                </div>
+            </div>
+
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <form className="grid gap-3 sm:flex sm:items-end sm:gap-3" onSubmit={handleCreateCodes}>
                 <div className="sm:w-40">
@@ -750,6 +916,8 @@ export default function AdminPage() {
                       </th>
                       <th className="py-2 px-2">兑换码</th>
                       <th className="py-2 px-2">状态</th>
+                      <th className="py-2 px-2">来源</th>
+                      <th className="py-2 px-2">创建时间</th>
                       <th className="py-2 px-2">使用时间</th>
                       <th className="py-2 px-2">企业账户</th>
                       <th className="py-2 px-2 text-right">操作</th>
@@ -778,6 +946,14 @@ export default function AdminPage() {
                           <span className={`${invite.used ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"} inline-block px-2 py-1 rounded text-xs`}>
                             {invite.used ? "已使用" : "未使用"}
                           </span>
+                        </td>
+                        <td className="py-2 px-2">
+                           <span className={`text-xs px-2 py-1 rounded ${invite.source === 'PURCHASE' ? 'bg-purple-100 text-purple-700' : 'bg-blue-50 text-blue-600'}`}>
+                             {invite.source === "PURCHASE" ? "购买" : "手动"} {invite.owner && `(${invite.owner.nickname || invite.owner.email})`}
+                           </span>
+                        </td>
+                        <td className="py-2 px-2 text-xs text-gray-500">
+                          {new Date(invite.createdAt).toLocaleString()}
                         </td>
                         <td className="py-2 px-2">
                           {invite.usedAt ? new Date(invite.usedAt).toLocaleString() : "-"}
@@ -818,6 +994,7 @@ export default function AdminPage() {
                 </table>
               </div>
             </div>
+            
             <div className="sm:hidden space-y-3">
               {paginatedInvites.map((invite) => (
                 <div key={invite.id} className="border rounded p-3 bg-white">
@@ -844,7 +1021,9 @@ export default function AdminPage() {
                   </div>
                   <div className="mt-2 text-xs text-gray-700 space-y-1">
                     <div>状态：{invite.used ? "已使用" : "未使用"}</div>
-                    <div>使用时间：{invite.usedAt ? new Date(invite.usedAt).toLocaleString() : "-"}</div>
+                    <div>来源：{invite.source === "PURCHASE" ? "购买" : "手动"}</div>
+                    <div>创建：{new Date(invite.createdAt).toLocaleString()}</div>
+                    <div>使用：{invite.usedAt ? new Date(invite.usedAt).toLocaleString() : "-"}</div>
                     <div>企业账户：{invite.enterpriseUser?.userPrincipalName || "-"}</div>
                   </div>
                   <div className="mt-2">
@@ -860,6 +1039,7 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
+
             {invites.length > INVITES_PER_PAGE && (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t pt-4">
                 <p className="text-sm text-gray-600">

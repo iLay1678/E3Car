@@ -30,15 +30,21 @@ export async function GET(request: Request) {
   }
 
   const config = await prisma.appConfig.findFirst({ orderBy: { id: "desc" } });
-  if (!config) {
-    return NextResponse.redirect(buildRedirectUrl(request, "/admin?error=config-missing"));
+  if (!config || !config.tenantId) {
+    return NextResponse.redirect(buildRedirectUrl(request, "/admin?error=config-missing-tenant"));
   }
+
+  // Derive redirect URI from config or app url
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  const redirectUri = `${appUrl}/api/admin/oauth/callback`;
 
   try {
     await exchangeCodeForToken({
       code,
       clientId: config.clientId,
-      clientSecret: config.clientSecret
+      clientSecret: config.clientSecret,
+      tenantId: config.tenantId,
+      redirectUri
     });
     const res = NextResponse.redirect(buildRedirectUrl(request, "/admin?success=oauth"));
     res.cookies.delete("oauth_state");

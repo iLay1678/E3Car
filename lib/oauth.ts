@@ -1,22 +1,10 @@
-import { prisma } from "./prisma";
 
-// Lazy load env vars to avoid build-time errors
-function getEnv(key: string) {
-  const value = process.env[key];
-  if (!value) {
-    throw new Error(`${key} is required`);
-  }
-  return value;
-}
 
-function getTokenEndpoint() {
-  const tenantId = getEnv("ENTRA_TENANT_ID");
+function getTokenEndpoint(tenantId: string) {
   return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
 }
 
-export function buildAuthorizeUrl(clientId: string, state: string) {
-  const tenantId = getEnv("ENTRA_TENANT_ID");
-  const redirectUri = getEnv("OAUTH_REDIRECT_URI");
+export function buildAuthorizeUrl(clientId: string, tenantId: string, redirectUri: string, state: string) {
   const authorizeEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`;
   const params = new URLSearchParams({
     client_id: clientId,
@@ -46,18 +34,22 @@ interface TokenResponse {
 export async function exchangeCodeForToken({
   code,
   clientId,
-  clientSecret
+  clientSecret,
+  tenantId,
+  redirectUri
 }: {
   code: string;
   clientId: string;
   clientSecret: string;
+  tenantId: string;
+  redirectUri: string;
 }) {
   const form = new URLSearchParams({
     client_id: clientId,
     client_secret: clientSecret,
     grant_type: "authorization_code",
     code,
-    redirect_uri: getEnv("OAUTH_REDIRECT_URI"),
+    redirect_uri: redirectUri,
     scope: [
       "offline_access",
       "https://graph.microsoft.com/User.ReadWrite.All",
@@ -65,7 +57,7 @@ export async function exchangeCodeForToken({
     ].join(" ")
   });
 
-  const res = await fetch(getTokenEndpoint(), {
+  const res = await fetch(getTokenEndpoint(tenantId), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form.toString()
@@ -93,11 +85,13 @@ export async function exchangeCodeForToken({
 export async function refreshAccessToken({
   refreshToken,
   clientId,
-  clientSecret
+  clientSecret,
+  tenantId
 }: {
   refreshToken: string;
   clientId: string;
   clientSecret: string;
+  tenantId: string;
 }) {
   const form = new URLSearchParams({
     client_id: clientId,
@@ -111,7 +105,7 @@ export async function refreshAccessToken({
     ].join(" ")
   });
 
-  const res = await fetch(getTokenEndpoint(), {
+  const res = await fetch(getTokenEndpoint(tenantId), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form.toString()
