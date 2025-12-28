@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type ConfigResponse = {
   hasConfig: boolean;
   clientId: string | null;
-  hasSecret: boolean;
+  clientSecret: string | null;
   licenseSkuId: string | null;
   
   authClientId: string | null;
@@ -150,7 +150,7 @@ export default function AdminPage() {
     setConfigForm((prev) => ({
         ...prev,
         clientId: data.clientId ?? "",
-        clientSecret: data.hasSecret ? prev.clientSecret : "", // Don't wipe if user typing, but here usually loading
+        clientSecret: data.clientSecret ?? "",
         licenseSkuId: data.licenseSkuId ?? "",
         authClientId: data.authClientId ?? "",
         authClientSecret: data.authClientSecret ?? "",

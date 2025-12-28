@@ -12,27 +12,40 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        const body = await request.json().catch(() => ({}));
+        let { out_trade_no } = body;
+
         const config = await prisma.appConfig.findFirst();
         if (!config || !config.epayPid || !config.epayKey || !config.epayUrl) {
             return NextResponse.json({ error: "Payment not configured" }, { status: 500 });
         }
 
-        const price = Number(config.invitePrice) || 10;
+        let price = Number(config.invitePrice) || 10;
+        let order;
 
-        // Create Layout Order
-        const out_trade_no = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
-
-        const order = await prisma.order.create({
-            data: {
-                tradeNo: out_trade_no,
-                amount: price,
-                userId: session.user.id,
-                status: "PENDING"
+        if (out_trade_no) {
+            order = await prisma.order.findUnique({
+                where: { tradeNo: out_trade_no, userId: session.user.id }
+            });
+            if (!order || order.status !== "PENDING") {
+                return NextResponse.json({ error: "Order not found or already paid" }, { status: 404 });
             }
-        });
+            price = Number(order.amount);
+        } else {
+            // Create Layout Order
+            out_trade_no = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
+            order = await prisma.order.create({
+                data: {
+                    tradeNo: out_trade_no,
+                    amount: price,
+                    userId: session.user.id,
+                    status: "PENDING"
+                }
+            });
+        }
 
         const notify_url = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/pay/notify`;
-        const return_url = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/orders`;
+        const return_url = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/orders?check=${out_trade_no}`;
 
         const params: Record<string, string> = {
             pid: config.epayPid,

@@ -4,9 +4,19 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function BuyPage() {
+  const [price, setPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/config")
+      .then(res => res.json())
+      .then(data => {
+        if (data.invitePrice) setPrice(data.invitePrice);
+      })
+      .catch(err => console.error("Failed to fetch config", err));
+  }, []);
 
   async function handlePurchase() {
     setLoading(true);
@@ -58,7 +68,9 @@ export default function BuyPage() {
             </div>
             <div className="flex justify-between items-center">
                 <span className="text-gray-600">价格</span>
-                <span className="text-xl font-bold text-purple-600">Checking...</span>
+                <span className="text-xl font-bold text-purple-600">
+                    {price !== null ? `¥${price.toFixed(2)}` : "查价中..."}
+                </span>
             </div>
             <p className="text-xs text-gray-400 mt-2">
                 * 购买后立即自动发货，可在“我的订单”中查看。
