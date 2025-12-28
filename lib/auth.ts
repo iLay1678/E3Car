@@ -10,8 +10,8 @@ export type Session = {
     user: {
         id: number;
         email: string;
-        nickname?: string;
-        avatar?: string;
+        nickname?: string | null;
+        avatar?: string | null;
     };
     expires: Date;
 };
@@ -41,7 +41,7 @@ export async function getSession(): Promise<Session | null> {
     }
 }
 
-export async function login(user: { id: number; email: string; nickname?: string; avatar?: string }) {
+export async function login(user: { id: number; email: string; nickname?: string | null; avatar?: string | null }) {
     const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const session = await encrypt({ user, expires });
 

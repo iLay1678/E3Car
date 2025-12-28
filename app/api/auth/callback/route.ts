@@ -71,7 +71,7 @@ export async function GET(request: Request) {
                 email,
                 nickname,
                 avatar,
-                source: "OAUTH",
+
             }
         });
 

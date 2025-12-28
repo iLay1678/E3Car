@@ -1,5 +1,7 @@
 
 
+import { prisma } from "./prisma";
+
 function getTokenEndpoint(tenantId: string) {
   return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
 }
