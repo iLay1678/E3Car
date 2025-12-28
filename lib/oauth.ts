@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 
-function requireEnv(key: string) {
+// Lazy load env vars to avoid build-time errors
+function getEnv(key: string) {
   const value = process.env[key];
   if (!value) {
     throw new Error(`${key} is required`);
@@ -8,17 +9,19 @@ function requireEnv(key: string) {
   return value;
 }
 
-const tenantId = requireEnv("ENTRA_TENANT_ID");
-const redirectUri = requireEnv("OAUTH_REDIRECT_URI");
-
-const tokenEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+function getTokenEndpoint() {
+  const tenantId = getEnv("ENTRA_TENANT_ID");
+  return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+}
 
 export function buildAuthorizeUrl(clientId: string, state: string) {
+  const tenantId = getEnv("ENTRA_TENANT_ID");
+  const redirectUri = getEnv("OAUTH_REDIRECT_URI");
   const authorizeEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`;
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: "code",
-    redirect_uri: redirectUri ?? "",
+    redirect_uri: redirectUri,
     response_mode: "query",
     scope: [
       "offline_access",
@@ -54,7 +57,7 @@ export async function exchangeCodeForToken({
     client_secret: clientSecret,
     grant_type: "authorization_code",
     code,
-    redirect_uri: redirectUri,
+    redirect_uri: getEnv("OAUTH_REDIRECT_URI"),
     scope: [
       "offline_access",
       "https://graph.microsoft.com/User.ReadWrite.All",
@@ -62,7 +65,7 @@ export async function exchangeCodeForToken({
     ].join(" ")
   });
 
-  const res = await fetch(tokenEndpoint, {
+  const res = await fetch(getTokenEndpoint(), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form.toString()
@@ -108,7 +111,7 @@ export async function refreshAccessToken({
     ].join(" ")
   });
 
-  const res = await fetch(tokenEndpoint, {
+  const res = await fetch(getTokenEndpoint(), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form.toString()

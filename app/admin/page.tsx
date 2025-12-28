@@ -64,6 +64,7 @@ export default function AdminPage() {
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [confirming, setConfirming] = useState<{ type: "delete" | "revoke"; code: string } | null>(null);
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
   const unusedCodes = invites.filter((invite) => !invite.used).map((invite) => invite.code);
   const usedCodes = invites.filter((invite) => invite.used).map((invite) => invite.code);
@@ -356,6 +357,10 @@ export default function AdminPage() {
     fetchConfigAndInvites();
   }
 
+  async function handleRevoke(code: string) {
+    return handleDelete(code);
+  }
+
   async function handleDelete(code: string) {
     setError(null);
     setMessage(null);
@@ -576,7 +581,7 @@ export default function AdminPage() {
                   className="btn btn-secondary whitespace-nowrap"
                   onClick={handleFetchSkus}
                   disabled={loadingSkus || !config?.token}
-                  aria-busy={loadingSkus}
+                  aria-busy={loadingSkus ? "true" : "false"}
                 >
                   {loadingSkus ? "加载中..." : "拉取 SKU"}
                 </button>
@@ -586,7 +591,7 @@ export default function AdminPage() {
                   type="submit"
                   className="btn btn-primary w-full sm:w-auto"
                   disabled={loading}
-                  aria-busy={loading}
+                  aria-busy={loading ? "true" : "false"}
                 >
                   保存配置
                 </button>
@@ -607,7 +612,7 @@ export default function AdminPage() {
                       className="btn btn-secondary w-full sm:w-auto"
                       onClick={handleRefreshGraphToken}
                       disabled={!config.token || graphRefreshLoading}
-                      aria-busy={graphRefreshLoading}
+                      aria-busy={graphRefreshLoading ? "true" : "false"}
                     >
                       {graphRefreshLoading ? "刷新中..." : "手动刷新 Token"}
                     </button>
@@ -787,7 +792,7 @@ export default function AdminPage() {
                           )}
                         </td>
                         <td className="py-2 px-2 text-right">
-                          {!invite.used && (
+                          {!invite.used ? (
                             <button
                               className="text-red-600 hover:underline"
                               onClick={() => {

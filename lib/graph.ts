@@ -1,16 +1,12 @@
 import { prisma } from "./prisma";
 import { refreshAccessToken } from "./oauth";
 
-const tenantDomain = process.env.ENTRA_TENANT_DOMAIN;
-const tenantId = process.env.ENTRA_TENANT_ID;
-const officeE3SkuId = process.env.OFFICE_E3_SKU_ID;
-const usageLocation = process.env.ENTRA_USAGE_LOCATION || "CN";
-
-if (!tenantDomain) {
-  throw new Error("ENTRA_TENANT_DOMAIN is required");
-}
-if (!tenantId) {
-  throw new Error("ENTRA_TENANT_ID is required");
+function getEnv(key: string) {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`${key} is required`);
+  }
+  return value;
 }
 
 async function getLatestToken() {
@@ -70,6 +66,7 @@ function generatePassword() {
 }
 
 async function assignOfficeE3License(userId: string, skuId?: string | null) {
+  const officeE3SkuId = process.env.OFFICE_E3_SKU_ID;
   const skuToAssign = skuId || officeE3SkuId;
   if (!skuToAssign) {
     return;
@@ -112,6 +109,7 @@ export async function createEnterpriseUser({
   localPart?: string;
 }) {
   const mailNickname = (localPart && localPart.trim()) || slugifyName(displayName);
+  const tenantDomain = getEnv("ENTRA_TENANT_DOMAIN");
   const userPrincipalName = `${mailNickname}@${tenantDomain}`;
   const password = generatePassword();
   const accessToken = await getAdminAccessToken();
@@ -127,7 +125,7 @@ export async function createEnterpriseUser({
       displayName,
       mailNickname,
       userPrincipalName,
-      usageLocation,
+      usageLocation: process.env.ENTRA_USAGE_LOCATION || "CN",
       passwordProfile: {
         forceChangePasswordNextSignIn: true,
         password

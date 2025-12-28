@@ -1,6 +1,9 @@
 # Entra Invite Redemption
 
+
 一个基于 Next.js 14 + Prisma 的示例：管理员配置 Microsoft Graph 应用并完成 OAuth 授权，批量分发兑换码，用户用兑换码在 Entra（Azure AD）自动创建企业账户，可选自动分配 Office 365 E3 许可证。面向新手，按步骤跟着做即可。
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FiLay1678%2FE3Car&env=DATABASE_URL,ENTRA_TENANT_ID,ENTRA_TENANT_DOMAIN,OAUTH_REDIRECT_URI,ADMIN_PASSWORD,ADMIN_JWT_SECRET&envDescription=DATABASE_URL%20must%20be%20Postgres.%20ENTRA%20vars%20from%20Azure%20Portal.%20OAUTH_REDIRECT_URI%20for%20production.)
 
 ## 快速开始（本地）
 
