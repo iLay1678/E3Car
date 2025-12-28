@@ -648,7 +648,7 @@ export default function AdminPage() {
                     <div>
                         <label className="block text-sm font-medium mb-1">MS Graph Secret</label>
                         <input
-                        type="text"
+                        type="password"
                         className="input"
                         value={configForm.clientSecret}
                         onChange={(e) => setConfigForm({ ...configForm, clientSecret: e.target.value })}

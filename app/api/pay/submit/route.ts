@@ -41,21 +41,11 @@ export async function POST(request: Request) {
             notify_url,
             return_url,
             name: "Invite Code Purchase",
-            money: price.toFixed(2),
-            sign_type: "MD5"
+            money: price.toFixed(2)
         };
 
         params.sign = sign(params, config.epayKey);
-
-        const qs = new URLSearchParams(params).toString();
-        const jumpUrl = `${config.epayUrl}/pay/submit.php?${qs}`;
-
-        // Normally we might return the URL for frontend to jump
-        // But since this is a submit API called by frontend, returning JSON is best.
-        // Or we could return a form HTML if we needed POST, but GET is fine for many epay usually?
-        // User guide says: "POST /pay/submit.php".
-        // So we should construct a form and auto-submit it, or use the client to submit.
-        // Returning the params to the client is cleaner.
+        params.sign_type = "MD5";
 
         return NextResponse.json({
             url: `${config.epayUrl}/pay/submit.php`,

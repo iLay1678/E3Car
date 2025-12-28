@@ -24,18 +24,21 @@ export default function BuyPage() {
         throw new Error(data.error || "创建订单失败");
       }
 
-      if (data.url) {
-         // If generic URL, jump
-         if (data.params) {
-             // If params are returned, we might need to construct a form?
-             // But EPay usually accepts GET for quick jumps if the URL is built unless too long
-             // Our API returns: url (base) and params object.
-             // Let's construct the full URL
-             const search = new URLSearchParams(data.params).toString();
-             window.location.href = `${data.url}?${search}`;
-         } else {
-             window.location.href = data.url; // If API returned full url
-         }
+      if (data.url && data.params) {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = data.url;
+          
+          for (const [key, value] of Object.entries(data.params)) {
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = String(value);
+              form.appendChild(input);
+          }
+          
+          document.body.appendChild(form);
+          form.submit();
       }
     } catch (err) {
       setError((err as Error).message);

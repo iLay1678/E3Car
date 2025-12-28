@@ -15,7 +15,7 @@ export async function GET() {
     hasConfig: !!config,
     clientId: config?.clientId ?? null,
     tenantId: config?.tenantId ?? null,
-    hasSecret: Boolean(config?.clientSecret),
+    clientSecret: config?.clientSecret ?? null,
     licenseSkuId: config?.licenseSkuId ?? null,
 
     // New fields
