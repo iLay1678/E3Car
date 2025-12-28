@@ -8,3 +8,4 @@ npm-debug.log*
 pnpm-lock.yaml
 yarn.lock
 .DS_Store
+.ai_memory
