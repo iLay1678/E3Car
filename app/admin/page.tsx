@@ -19,6 +19,7 @@ type ConfigResponse = {
   epayUrl: string | null;
   invitePrice: string | number | null;
 
+  tenantId: string | null;
   updatedAt: string | null;
   token: {
     expiresAt: string;
@@ -52,7 +53,7 @@ const GRAPH_TOKEN_MIN_REFRESH_MS = 60 * 1000;
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [activeTab, setActiveTab] = useState<"config" | "invites">("config");
+  const [activeTab, setActiveTab] = useState<"config" | "invites" | "users" | "orders">("config");
   const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [configForm, setConfigForm] = useState({
     clientId: "",
@@ -66,7 +67,8 @@ export default function AdminPage() {
     epayPid: "",
     epayKey: "",
     epayUrl: "",
-    invitePrice: ""
+    invitePrice: "",
+    tenantId: ""
   });
   
   const [filterSource, setFilterSource] = useState("all");
@@ -95,6 +97,14 @@ export default function AdminPage() {
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [confirming, setConfirming] = useState<{ type: "delete" | "revoke"; code: string } | null>(null);
+  
+  const [users, setUsers] = useState<any[]>([]);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersTotalPages, setOrdersTotalPages] = useState(1);
+
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
   
   const unusedCodes = invites.filter((invite) => !invite.used).map((invite) => invite.code);
@@ -150,7 +160,8 @@ export default function AdminPage() {
         epayPid: data.epayPid ?? "",
         epayKey: data.epayKey ?? "",
         epayUrl: data.epayUrl ?? "",
-        invitePrice: data.invitePrice?.toString() ?? ""
+        invitePrice: data.invitePrice?.toString() ?? "",
+        tenantId: data.tenantId ?? ""
     }));
 
     const query = new URLSearchParams();
@@ -169,11 +180,41 @@ export default function AdminPage() {
     }
   }, [fetchWithAuth, filterSource, filterStatus]);
 
+  const fetchUsers = useCallback(async (page: number) => {
+    setLoading(true);
+    const res = await fetchWithAuth(`/api/admin/users?page=${page}&limit=10`);
+    setLoading(false);
+    if (res.ok) {
+      const data = await res.json();
+      setUsers(data.users);
+      setUsersTotalPages(data.pagination.totalPages);
+      setUsersPage(data.pagination.page);
+    }
+  }, [fetchWithAuth]);
+
+  const fetchOrders = useCallback(async (page: number) => {
+    setLoading(true);
+    const res = await fetchWithAuth(`/api/admin/orders?page=${page}&limit=10`);
+    setLoading(false);
+    if (res.ok) {
+      const data = await res.json();
+      setOrders(data.orders);
+      setOrdersTotalPages(data.pagination.totalPages);
+      setOrdersPage(data.pagination.page);
+    }
+  }, [fetchWithAuth]);
+
   useEffect(() => {
     if (authed) {
+      if (activeTab === "config" || activeTab === "invites") {
         fetchConfigAndInvites();
+      } else if (activeTab === "users") {
+        fetchUsers(usersPage);
+      } else if (activeTab === "orders") {
+        fetchOrders(ordersPage);
+      }
     }
-  }, [fetchConfigAndInvites, authed]);
+  }, [fetchConfigAndInvites, fetchUsers, fetchOrders, authed, activeTab, usersPage, ordersPage]);
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages));
@@ -548,20 +589,34 @@ export default function AdminPage() {
 
       {authed && (
         <>
-          <div className="card p-2 sm:p-3 flex items-center gap-2 w-full sm:w-auto">
+          <div className="card p-2 sm:p-3 flex flex-wrap items-center gap-2 w-full sm:w-auto overflow-x-auto">
             <button
               type="button"
-              className={`btn ${activeTab === "config" ? "btn-primary" : "btn-secondary"}`}
+              className={`btn whitespace-nowrap ${activeTab === "config" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => setActiveTab("config")}
             >
               配置与授权
             </button>
             <button
               type="button"
-              className={`btn ${activeTab === "invites" ? "btn-primary" : "btn-secondary"}`}
+              className={`btn whitespace-nowrap ${activeTab === "invites" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => setActiveTab("invites")}
             >
               兑换码管理
+            </button>
+            <button
+              type="button"
+              className={`btn whitespace-nowrap ${activeTab === "users" ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => setActiveTab("users")}
+            >
+              用户管理
+            </button>
+            <button
+              type="button"
+              className={`btn whitespace-nowrap ${activeTab === "orders" ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => setActiveTab("orders")}
+            >
+              订单管理
             </button>
           </div>
           {error && (
@@ -593,10 +648,22 @@ export default function AdminPage() {
                     <div>
                         <label className="block text-sm font-medium mb-1">MS Graph Secret</label>
                         <input
-                        type="password"
+                        type="text"
                         className="input"
                         value={configForm.clientSecret}
                         onChange={(e) => setConfigForm({ ...configForm, clientSecret: e.target.value })}
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">MS Graph Tenant ID</label>
+                        <input
+                        className="input"
+                        value={configForm.tenantId}
+                        onChange={(e) => setConfigForm({ ...configForm, tenantId: e.target.value })}
+                        placeholder="Common or GUID"
                         />
                     </div>
                 </div>
@@ -1077,6 +1144,100 @@ export default function AdminPage() {
               </div>
             )}
           </section>
+          )}
+
+          {activeTab === "users" && (
+            <section className="card p-6 space-y-6">
+              <h2 className="text-xl font-semibold">用户管理</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="border-b bg-gray-50">
+                    <tr>
+                      <th className="py-2 px-4">ID</th>
+                      <th className="py-2 px-4">昵称</th>
+                      <th className="py-2 px-4">邮箱</th>
+                      <th className="py-2 px-4">加入时间</th>
+                      <th className="py-2 px-4 text-center">订单/兑换</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} className="border-b hover:bg-gray-50">
+                        <td className="py-2 px-4 text-gray-500">{u.id}</td>
+                        <td className="py-2 px-4 font-medium">{u.nickname || "N/A"}</td>
+                        <td className="py-2 px-4">{u.email}</td>
+                        <td className="py-2 px-4 text-gray-500">{new Date(u.createdAt).toLocaleString()}</td>
+                        <td className="py-2 px-4 text-center">
+                          {u._count.orders} / {u._count.invites}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {usersTotalPages > 1 && (
+                <div className="flex justify-center gap-2 pt-4">
+                   <button disabled={usersPage <= 1} onClick={() => setUsersPage(p => p - 1)} className="btn btn-secondary px-3 py-1">上一页</button>
+                   <span className="flex items-center text-sm font-medium">{usersPage} / {usersTotalPages}</span>
+                   <button disabled={usersPage >= usersTotalPages} onClick={() => setUsersPage(p => p + 1)} className="btn btn-secondary px-3 py-1">下一页</button>
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeTab === "orders" && (
+            <section className="card p-6 space-y-6">
+              <h2 className="text-xl font-semibold">订单管理</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="border-b bg-gray-50">
+                    <tr>
+                      <th className="py-2 px-4">商户单号</th>
+                      <th className="py-2 px-4">金额</th>
+                      <th className="py-2 px-4">状态</th>
+                      <th className="py-2 px-4">下单用户</th>
+                      <th className="py-2 px-4">兑换码</th>
+                      <th className="py-2 px-4">下单时间</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((o) => (
+                      <tr key={o.id} className="border-b hover:bg-gray-50">
+                        <td className="py-2 px-4 font-mono">{o.tradeNo}</td>
+                        <td className="py-2 px-4">¥{Number(o.amount).toFixed(2)}</td>
+                        <td className="py-2 px-4">
+                           <span className={`px-2 py-1 rounded text-xs ${o.status === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                              {o.status === 'PAID' ? '已支付' : o.status}
+                           </span>
+                        </td>
+                        <td className="py-2 px-4">
+                          <div className="text-sm font-medium">{o.user.nickname}</div>
+                          <div className="text-xs text-gray-500">{o.user.email}</div>
+                        </td>
+                        <td className="py-2 px-4">
+                           {o.inviteCode ? (
+                             <div className="flex items-center gap-1">
+                               <span className="font-mono text-xs">{o.inviteCode.code}</span>
+                               <span className={`px-1 rounded-[2px] text-[10px] ${o.inviteCode.used ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-600'}`}>
+                                 {o.inviteCode.used ? '已用' : '未用'}
+                               </span>
+                             </div>
+                           ) : "-"}
+                        </td>
+                        <td className="py-2 px-4 text-xs text-gray-500">{new Date(o.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+               {ordersTotalPages > 1 && (
+                <div className="flex justify-center gap-2 pt-4">
+                   <button disabled={ordersPage <= 1} onClick={() => setOrdersPage(p => p - 1)} className="btn btn-secondary px-3 py-1">上一页</button>
+                   <span className="flex items-center text-sm font-medium">{ordersPage} / {ordersTotalPages}</span>
+                   <button disabled={ordersPage >= ordersTotalPages} onClick={() => setOrdersPage(p => p + 1)} className="btn btn-secondary px-3 py-1">下一页</button>
+                </div>
+              )}
+            </section>
           )}
           {confirming && (
             <div className="modal-overlay" role="dialog" aria-modal="true">

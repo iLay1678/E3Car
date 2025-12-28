@@ -1,253 +1,52 @@
-"use client";
+import { getSession } from "@/lib/auth";
+import Link from "next/link";
+import { Dashboard } from "./_components/Dashboard";
 
-import { useState } from "react";
+export const dynamic = "force-dynamic";
 
-type RedeemResponse = {
-  userPrincipalName: string;
-  password: string;
-};
-
-export default function Home() {
-  const [displayName, setDisplayName] = useState("");
-  const [localPart, setLocalPart] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<RedeemResponse | null>(null);
-  const [copyMessage, setCopyMessage] = useState<string | null>(null);
-  const [resetUserPrincipalName, setResetUserPrincipalName] = useState("");
-  const [resetInviteCode, setResetInviteCode] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetError, setResetError] = useState<string | null>(null);
-  const [resetResult, setResetResult] = useState<RedeemResponse | null>(null);
-
-  async function handleCopy(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopyMessage(`已复制：${text}`);
-    } catch {
-      setCopyMessage("复制失败，请手动选择复制");
-    }
-    setTimeout(() => setCopyMessage(null), 2000);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    const res = await fetch("/api/redeem", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ displayName, localPart, inviteCode })
-    });
-    setLoading(false);
-    if (!res.ok) {
-      const body = await res.json();
-      setError(body.error || "操作失败");
-      return;
-    }
-    const data = (await res.json()) as RedeemResponse;
-    setResult(data);
-  }
-
-  async function handleResetSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setResetLoading(true);
-    setResetError(null);
-    setResetResult(null);
-    const res = await fetch("/api/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userPrincipalName: resetUserPrincipalName,
-        inviteCode: resetInviteCode
-      })
-    });
-    setResetLoading(false);
-    if (!res.ok) {
-      const body = await res.json();
-      setResetError(body.error || "操作失败");
-      return;
-    }
-    const data = (await res.json()) as RedeemResponse;
-    setResetResult(data);
-  }
+export default async function Home() {
+  const session = await getSession();
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
-      <div className="space-y-2 sm:space-y-3 mb-6 sm:mb-8">
-        <h1 className="heading">使用兑换码创建企业账户</h1>
-        <p className="text-gray-700">按步骤完成授权与兑换，系统将为你的组织自动创建企业账户，并可选择分配 Office 365 E3。</p>
-      </div>
-      {!result && (
-        <form
-          onSubmit={handleSubmit}
-          className="card p-5 sm:p-6 space-y-4 sm:space-y-5"
-        >
-          <div>
-            <label htmlFor="displayName" className="block text-sm font-medium mb-1">显示名</label>
-            <input
-              className="input"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              id="displayName"
-              required
-            />
+    <main className="min-h-[80vh] flex flex-col items-center justify-center">
+      {!session ? (
+        <div className="max-w-2xl mx-auto px-6 py-12 text-center space-y-8">
+          <div className="space-y-4">
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900">
+              E3Car 企业账户自助兑换系统
+            </h1>
+            <p className="text-xl text-gray-600">
+              自动开通 Office 365 E3 订阅，安全、快速、自助管理。
+            </p>
           </div>
-          <div>
-            <label htmlFor="localPart" className="block text-sm font-medium mb-1">
-              账号前缀（可选，留空将自动生成）
-            </label>
-            <input
-              className="input"
-              value={localPart}
-              onChange={(e) => setLocalPart(e.target.value)}
-              id="localPart"
-            />
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+             <Link 
+               href="/api/auth/login" 
+               className="btn btn-primary px-8 py-3 text-lg shadow-lg hover:shadow-xl transition-all"
+             >
+               立即登录 / 注册
+             </Link>
           </div>
-          <div>
-            <label htmlFor="inviteCode" className="block text-sm font-medium mb-1">兑换码</label>
-            <input
-              className="input"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              id="inviteCode"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="btn btn-primary w-full"
-            disabled={loading}
-            aria-busy={loading}
-          >
-            {loading ? "提交中..." : "创建企业账户"}
-          </button>
-          {error && <p className="text-red-600 text-sm" role="alert" aria-live="polite">{error}</p>}
-        </form>
-      )}
-
-      {result && (
-        <div className="bg-green-50 border border-green-200 rounded p-5 sm:p-6 space-y-3">
-          <h2 className="text-2xl font-semibold text-green-700">创建成功</h2>
-          {copyMessage && (
-            <p className="text-green-700 text-sm" role="status" aria-live="polite">{copyMessage}</p>
-          )}
-          <div className="grid sm:grid-cols-2 gap-3 text-sm sm:text-base">
-            <div className="flex flex-wrap items-center gap-2 break-all">
-              <span>
-                企业账户：<span className="font-mono">{result.userPrincipalName}</span>
-              </span>
-              <button className="link" onClick={() => handleCopy(result.userPrincipalName)}>
-                复制
-              </button>
+          
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+            <div className="p-6 bg-white rounded-xl border shadow-sm">
+              <h3 className="font-semibold text-lg mb-2">自动开通</h3>
+              <p className="text-gray-500">使用兑换码，系统自动为您创建企业子账号并分配许可。</p>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-gray-700">
-              <span>
-                初始密码：<span className="font-mono">{result.password}</span>
-              </span>
-              <button className="link" onClick={() => handleCopy(result.password)}>
-                复制
-              </button>
+            <div className="p-6 bg-white rounded-xl border shadow-sm">
+              <h3 className="font-semibold text-lg mb-2">自助管理</h3>
+              <p className="text-gray-500">随时查看订单状态，自主重置账号密码，无需人工干预。</p>
             </div>
-            <button
-              className="text-blue-700 underline font-medium"
-              onClick={() => {
-                setResult(null);
-                setDisplayName("");
-                setLocalPart("");
-                setInviteCode("");
-              }}
-            >
-              返回继续创建
-            </button>
+             <div className="p-6 bg-white rounded-xl border shadow-sm">
+              <h3 className="font-semibold text-lg mb-2">安全可靠</h3>
+              <p className="text-gray-500">通过 OAuth 统一认证，保障您的账户与数据安全。</p>
+            </div>
           </div>
         </div>
+      ) : (
+        <Dashboard user={session.user} />
       )}
-
-      <section className="space-y-4 sm:space-y-5 mt-10">
-        <h2 className="text-2xl font-semibold text-gray-900">兑换码 + 账号重置密码</h2>
-        <p className="text-sm text-gray-600">
-          同时提供兑换码和对应的用户账号才能重置密码，防止被滥用。
-        </p>
-        {!resetResult && (
-          <form
-            onSubmit={handleResetSubmit}
-            className="card p-5 sm:p-6 space-y-4 sm:space-y-5"
-          >
-            <div>
-              <label htmlFor="resetUser" className="block text-sm font-medium mb-1">用户账号（userPrincipalName）</label>
-              <input
-                className="input"
-                id="resetUser"
-                value={resetUserPrincipalName}
-                onChange={(e) => setResetUserPrincipalName(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="resetCode" className="block text-sm font-medium mb-1">兑换码</label>
-              <input
-                className="input"
-                id="resetCode"
-                value={resetInviteCode}
-                onChange={(e) => setResetInviteCode(e.target.value)}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="btn btn-primary w-full"
-              disabled={resetLoading}
-              aria-busy={resetLoading}
-            >
-              {resetLoading ? "重置中..." : "重置密码"}
-            </button>
-            {resetError && <p className="text-red-600 text-sm" role="alert" aria-live="polite">{resetError}</p>}
-          </form>
-        )}
-
-        {resetResult && (
-          <div className="bg-green-50 border border-green-200 rounded p-5 sm:p-6 space-y-3">
-            <h3 className="text-xl font-semibold text-green-700">密码重置成功</h3>
-            {copyMessage && (
-              <p className="text-green-700 text-sm" role="status" aria-live="polite">{copyMessage}</p>
-            )}
-            <div className="grid sm:grid-cols-2 gap-3 text-sm sm:text-base">
-              <div className="flex flex-wrap items-center gap-2 break-all">
-                <span>
-                  企业账户：<span className="font-mono">{resetResult.userPrincipalName}</span>
-                </span>
-                <button className="link" onClick={() => handleCopy(resetResult.userPrincipalName)}>
-                  复制
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-gray-700">
-                <span>
-                  新密码：<span className="font-mono">{resetResult.password}</span>
-                </span>
-                <button className="link" onClick={() => handleCopy(resetResult.password)}>
-                  复制
-                </button>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              请尽快登录并修改密码，避免泄漏。
-            </p>
-            <button
-              className="text-blue-700 underline font-medium"
-              onClick={() => {
-                setResetResult(null);
-                setResetInviteCode("");
-                setResetUserPrincipalName("");
-              }}
-            >
-              返回重新操作
-            </button>
-          </div>
-        )}
-      </section>
-    </div>
+    </main>
   );
 }

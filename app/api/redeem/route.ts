@@ -10,7 +10,13 @@ const schema = z.object({
   inviteCode: z.string().min(1)
 });
 
+import { getSession } from "@/lib/auth";
+
 export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const body = await request.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
   if (!parsed.success) {

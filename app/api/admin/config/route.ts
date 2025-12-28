@@ -14,6 +14,7 @@ export async function GET() {
   return NextResponse.json({
     hasConfig: !!config,
     clientId: config?.clientId ?? null,
+    tenantId: config?.tenantId ?? null,
     hasSecret: Boolean(config?.clientSecret),
     licenseSkuId: config?.licenseSkuId ?? null,
 
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
   // We'll keep Graph logic mandatory for now to avoid breaking existing flow, but add others.
 
   const {
-    clientId, clientSecret, licenseSkuId,
+    clientId, clientSecret, licenseSkuId, tenantId,
     authClientId, authClientSecret, authUrl, tokenUrl, userUrl,
     epayPid, epayKey, epayUrl, invitePrice
   } = body;
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
   const data = {
     clientId,
     clientSecret,
+    tenantId: tenantId || null,
     licenseSkuId: licenseSkuId || null,
     authClientId: authClientId || null,
     authClientSecret: authClientSecret || null,
