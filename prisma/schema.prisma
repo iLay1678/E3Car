@@ -6,6 +6,12 @@ generator client {
   previewFeatures = ["driverAdapters"]
 }
 
+generator cf {
+  provider = "prisma-client"
+  runtime = "cloudflare"
+  output = "../src/generated"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
