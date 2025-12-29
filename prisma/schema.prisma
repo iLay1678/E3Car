@@ -1,15 +1,14 @@
 // Prisma schema for Entra invite redemption
 
-generator client {
+generator prod {
   provider        = "prisma-client-js"
   binaryTargets   = ["native", "rhel-openssl-1.1.x"]
   previewFeatures = ["driverAdapters"]
 }
 
-generator cf {
+generator cf-prod {
   provider = "prisma-client-js"
   runtime = "cloudflare"
-  output = "../src/generated"
 }
 
 datasource db {

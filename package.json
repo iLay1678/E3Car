@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "cf-build": "prisma generate --generator cf && prisma migrate deploy && next build",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "cf-build": "prisma generate --generator cf-prod && prisma migrate deploy && next build",
+    "build": "prisma generate --generator prod && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
