@@ -7,8 +7,9 @@ generator prod {
 }
 
 generator cf-prod {
-  provider = "prisma-client-js"
-  runtime = "cloudflare"
+  provider        = "prisma-client-js"
+  runtime         = "cloudflare"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
